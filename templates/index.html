@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Companies - BigQuery Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .status-badge {
+            font-size: 0.8em;
+            padding: 0.25em 0.5em;
+        }
+        .company-card {
+            transition: all 0.3s ease;
+        }
+        .company-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-toggle {
+            cursor: pointer;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .flash-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        Gestión de Companies - BigQuery Status
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Actualizar
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="exportToCSV()">
+                            <i class="fas fa-download me-1"></i>
+                            Exportar CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Buscar compañía:</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Nombre de la compañía...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter" class="form-label">Filtrar por status:</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">Todos</option>
+                                    <option value="true">Activo (True)</option>
+                                    <option value="false">Inactivo (False)</option>
+                                    <option value="null">Sin definir (Null)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="projectFilter" class="form-label">Filtrar por proyecto:</label>
+                                <select class="form-select" id="projectFilter">
+                                    <option value="">Todos los proyectos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times me-1"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total</h5>
+                                <h3 id="totalCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Activas</h5>
+                                <h3 id="activeCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Inactivas</h5>
+                                <h3 id="inactiveCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Sin definir</h5>
+                                <h3 id="nullCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de compañías -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Lista de Companies
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Nuevo Nombre</th>
+                                        <th>Project ID</th>
+                                        <th>BigQuery Status</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="companiesTableBody">
+                                    <!-- Los datos se cargarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar cambio de status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let companiesData = [];
+        let filteredData = [];
+
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCompanies();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Filtros
+            document.getElementById('searchInput').addEventListener('input', filterCompanies);
+            document.getElementById('statusFilter').addEventListener('change', filterCompanies);
+            document.getElementById('projectFilter').addEventListener('change', filterCompanies);
+        }
+
+        async function loadCompanies() {
+            try {
+                const response = await fetch('/api/companies');
+                companiesData = await response.json();
+                filteredData = [...companiesData];
+                updateTable();
+                updateStats();
+                updateProjectFilter();
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                showFlashMessage('Error al cargar los datos', 'error');
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('companiesTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(company => {
+                const row = document.createElement('tr');
+                row.className = 'company-card';
+                
+                const statusClass = company.company_bigquery_status === true ? 'success' : 
+                                  company.company_bigquery_status === false ? 'danger' : 'secondary';
+                const statusText = company.company_bigquery_status === true ? 'Activo' : 
+                                 company.company_bigquery_status === false ? 'Inactivo' : 'Sin definir';
+
+                row.innerHTML = `
+                    <td><strong>${company.company_id}</strong></td>
+                    <td>${company.company_name || '-'}</td>
+                    <td>${company.company_new_name || '-'}</td>
+                    <td><code>${company.company_project_id || '-'}</code></td>
+                    <td>
+                        <span class="badge bg-${statusClass} status-badge">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-success" onclick="toggleStatus(${company.company_id}, true)" title="Activar">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="toggleStatus(${company.company_id}, false)" title="Desactivar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="toggleStatus(${company.company_id}, null)" title="Sin definir">
+                                <i class="fas fa-question"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStats() {
+            const total = filteredData.length;
+            const active = filteredData.filter(c => c.company_bigquery_status === true).length;
+            const inactive = filteredData.filter(c => c.company_bigquery_status === false).length;
+            const nullStatus = filteredData.filter(c => c.company_bigquery_status === null).length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('activeCount').textContent = active;
+            document.getElementById('inactiveCount').textContent = inactive;
+            document.getElementById('nullCount').textContent = nullStatus;
+        }
+
+        function updateProjectFilter() {
+            const projectFilter = document.getElementById('projectFilter');
+            const projects = [...new Set(companiesData.map(c => c.company_project_id).filter(p => p))];
+            
+            projectFilter.innerHTML = '<option value="">Todos los proyectos</option>';
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project;
+                option.textContent = project;
+                projectFilter.appendChild(option);
+            });
+        }
+
+        function filterCompanies() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const projectFilter = document.getElementById('projectFilter').value;
+
+            filteredData = companiesData.filter(company => {
+                const matchesSearch = !searchTerm || 
+                    company.company_name?.toLowerCase().includes(searchTerm) ||
+                    company.company_new_name?.toLowerCase().includes(searchTerm);
+                
+                const matchesStatus = !statusFilter || 
+                    (statusFilter === 'true' && company.company_bigquery_status === true) ||
+                    (statusFilter === 'false' && company.company_bigquery_status === false) ||
+                    (statusFilter === 'null' && company.company_bigquery_status === null);
+                
+                const matchesProject = !projectFilter || company.company_project_id === projectFilter;
+
+                return matchesSearch && matchesStatus && matchesProject;
+            });
+
+            updateTable();
+            updateStats();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('projectFilter').value = '';
+            filterCompanies();
+        }
+
+        function toggleStatus(companyId, newStatus) {
+            const company = companiesData.find(c => c.company_id === companyId);
+            const statusText = newStatus === true ? 'activar' : newStatus === false ? 'desactivar' : 'quitar definición';
+            
+            document.getElementById('confirmMessage').innerHTML = `
+                ¿Estás seguro de que quieres <strong>${statusText}</strong> la compañía 
+                <strong>"${company.company_name}"</strong> (ID: ${companyId})?
+            `;
+            
+            const confirmButton = document.getElementById('confirmButton');
+            confirmButton.onclick = () => {
+                updateCompanyStatus(companyId, newStatus);
+                bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            };
+            
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        async function updateCompanyStatus(companyId, newStatus) {
+            try {
+                const response = await fetch('/api/update_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_id: companyId,
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showFlashMessage('Status actualizado exitosamente', 'success');
+                    await loadCompanies(); // Recargar datos
+                } else {
+                    showFlashMessage(`Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error actualizando status:', error);
+                showFlashMessage('Error al actualizar el status', 'error');
+            }
+        }
+
+        function refreshData() {
+            loadCompanies();
+        }
+
+        function exportToCSV() {
+            const headers = ['ID', 'Nombre', 'Nuevo Nombre', 'Project ID', 'BigQuery Status'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredData.map(company => [
+                    company.company_id,
+                    `"${company.company_name || ''}"`,
+                    `"${company.company_new_name || ''}"`,
+                    `"${company.company_project_id || ''}"`,
+                    company.company_bigquery_status
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `companies_status_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showFlashMessage(message, type) {
+            const flashDiv = document.createElement('div');
+            flashDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show flash-message`;
+            flashDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(flashDiv);
+            
+            setTimeout(() => {
+                flashDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 
