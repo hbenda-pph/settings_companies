@@ -143,6 +143,10 @@ def api_update_status():
     if company_id is None or new_status is None:
         return jsonify({'success': False, 'message': 'Datos incompletos'}), 400
     
+    # Validar que new_status sea un boolean
+    if not isinstance(new_status, bool):
+        return jsonify({'success': False, 'message': 'Status debe ser true o false'}), 400
+    
     success, message = update_company_status(company_id, new_status)
     return jsonify({'success': success, 'message': message})
 
@@ -171,8 +175,15 @@ def api_update_all_status():
     data = request.get_json()
     new_status = data.get('status')
     
+    print(f"🔍 API update_all_status - Data recibida: {data}")
+    print(f"🔍 API update_all_status - new_status: {new_status} (tipo: {type(new_status)})")
+    
     if new_status is None:
         return jsonify({'success': False, 'message': 'Status requerido'}), 400
+    
+    # Validar que new_status sea un boolean
+    if not isinstance(new_status, bool):
+        return jsonify({'success': False, 'message': f'Status debe ser true o false, recibido: {new_status} (tipo: {type(new_status)})'}), 400
     
     success, message = update_all_companies_status(new_status)
     return jsonify({'success': success, 'message': message})

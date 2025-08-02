@@ -369,6 +369,12 @@
         }
 
         async function updateCompanyStatus(companyId, newStatus) {
+            // Validar que newStatus sea un boolean válido
+            if (typeof newStatus !== 'boolean') {
+                showFlashMessage('Error: Status debe ser true o false', 'error');
+                return;
+            }
+
             try {
                 const response = await fetch('/api/update_status', {
                     method: 'POST',
@@ -456,6 +462,12 @@
         }
 
         async function executeBulkUpdate(newStatus) {
+            // Validar que newStatus sea un boolean válido
+            if (typeof newStatus !== 'boolean') {
+                showFlashMessage('Error: Status debe ser true o false', 'error');
+                return;
+            }
+
             try {
                 const response = await fetch('/api/update_all_status', {
                     method: 'POST',
@@ -487,7 +499,7 @@
 
         function executeBulkAction() {
             const selectedAction = document.getElementById('bulkActionSelect').value;
-            const newStatus = selectedAction === 'true';
+            const newStatus = selectedAction === 'true' ? true : false;
             
             bootstrap.Modal.getInstance(document.getElementById('bulkActionModal')).hide();
             updateAllCompanies(newStatus);
