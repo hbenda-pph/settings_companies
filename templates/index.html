@@ -55,6 +55,44 @@
                     </div>
                 </div>
 
+                <!-- Acciones masivas -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            Acciones Masivas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <button class="btn btn-success w-100" onclick="updateAllCompanies(true)">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Activar Todas
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-danger w-100" onclick="updateAllCompanies(false)">
+                                    <i class="fas fa-times-circle me-1"></i>
+                                    Desactivar Todas
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-secondary w-100" onclick="updateAllCompanies(null)">
+                                    <i class="fas fa-question-circle me-1"></i>
+                                    Sin Definir Todas
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-warning w-100" onclick="showBulkActionModal()">
+                                    <i class="fas fa-edit me-1"></i>
+                                    Acción Personalizada
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Filtros -->
                 <div class="card mb-4">
                     <div class="card-body">
@@ -170,6 +208,36 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de acción masiva -->
+    <div class="modal fade" id="bulkActionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Acción Masiva Personalizada</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar acción:</label>
+                        <select class="form-select" id="bulkActionSelect">
+                            <option value="true">Activar todas las compañías</option>
+                            <option value="false">Desactivar todas las compañías</option>
+                            <option value="null">Marcar como "Sin definir" todas las compañías</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Advertencia:</strong> Esta acción afectará a <strong>TODAS</strong> las compañías en la tabla.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" onclick="executeBulkAction()">Ejecutar Acción</button>
                 </div>
             </div>
         </div>
@@ -389,6 +457,62 @@
             setTimeout(() => {
                 flashDiv.remove();
             }, 5000);
+        }
+
+        // Funciones para acciones masivas
+        function updateAllCompanies(newStatus) {
+            const statusText = newStatus === true ? 'activar' : newStatus === false ? 'desactivar' : 'marcar como sin definir';
+            
+            document.getElementById('confirmMessage').innerHTML = `
+                ¿Estás seguro de que quieres <strong>${statusText}</strong> <strong>TODAS</strong> las compañías?<br><br>
+                <span class="text-warning">Esta acción afectará a todas las compañías en la tabla.</span>
+            `;
+            
+            const confirmButton = document.getElementById('confirmButton');
+            confirmButton.onclick = () => {
+                executeBulkUpdate(newStatus);
+                bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            };
+            
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        async function executeBulkUpdate(newStatus) {
+            try {
+                const response = await fetch('/api/update_all_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showFlashMessage(result.message, 'success');
+                    await loadCompanies(); // Recargar datos
+                } else {
+                    showFlashMessage(`Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error ejecutando acción masiva:', error);
+                showFlashMessage('Error al ejecutar la acción masiva', 'error');
+            }
+        }
+
+        function showBulkActionModal() {
+            new bootstrap.Modal(document.getElementById('bulkActionModal')).show();
+        }
+
+        function executeBulkAction() {
+            const selectedAction = document.getElementById('bulkActionSelect').value;
+            const newStatus = selectedAction === 'null' ? null : selectedAction === 'true';
+            
+            bootstrap.Modal.getInstance(document.getElementById('bulkActionModal')).hide();
+            updateAllCompanies(newStatus);
         }
     </script>
 </body>
