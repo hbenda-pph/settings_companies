@@ -41,7 +41,7 @@ def get_companies():
             company_project_id,
             company_bigquery_status
         FROM `{PROJECT_ID}.{DATASET_NAME}.{TABLE_NAME}`
-        ORDER BY company_name
+        ORDER BY company_id
     """
     
     print(f"📝 Ejecutando query: {query}")

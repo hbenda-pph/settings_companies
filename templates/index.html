@@ -250,6 +250,9 @@
                 const response = await fetch('/api/companies');
                 companiesData = await response.json();
                 filteredData = [...companiesData];
+                
+                console.log('📋 Datos recibidos del backend:', companiesData.map(c => c.company_name));
+                
                 updateTable();
                 updateStats();
                 updateProjectFilter();
