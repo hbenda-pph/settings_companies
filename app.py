@@ -87,7 +87,14 @@ def update_company_status(company_id, new_status):
     try:
         query_job = client.query(query)
         result = query_job.result()
-        print(f"✅ Actualización completada. Filas afectadas: {result.num_dml_affected_rows}")
+        
+        # Verificar si hay filas afectadas de forma segura
+        try:
+            affected_rows = result.num_dml_affected_rows
+            print(f"✅ Actualización completada. Filas afectadas: {affected_rows}")
+        except AttributeError:
+            print("✅ Actualización completada (sin información de filas afectadas)")
+        
         return True, f"Status actualizado exitosamente a {status_value}"
     except Exception as e:
         print(f"❌ Error en actualización: {e}")
@@ -114,7 +121,14 @@ def update_all_companies_status(new_status):
     try:
         query_job = client.query(query)
         result = query_job.result()
-        print(f"✅ Actualización masiva completada. Filas afectadas: {result.num_dml_affected_rows}")
+        
+        # Verificar si hay filas afectadas de forma segura
+        try:
+            affected_rows = result.num_dml_affected_rows
+            print(f"✅ Actualización masiva completada. Filas afectadas: {affected_rows}")
+        except AttributeError:
+            print("✅ Actualización masiva completada (sin información de filas afectadas)")
+        
         return True, f"Status actualizado exitosamente para todas las compañías a: {status_value}"
     except Exception as e:
         print(f"❌ Error en actualización masiva: {e}")
