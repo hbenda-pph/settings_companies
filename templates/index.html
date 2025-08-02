@@ -65,25 +65,19 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <button class="btn btn-success w-100" onclick="updateAllCompanies(true)">
                                     <i class="fas fa-check-circle me-1"></i>
                                     Activar Todas
                                 </button>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <button class="btn btn-danger w-100" onclick="updateAllCompanies(false)">
                                     <i class="fas fa-times-circle me-1"></i>
                                     Desactivar Todas
                                 </button>
                             </div>
-                            <div class="col-md-3">
-                                <button class="btn btn-secondary w-100" onclick="updateAllCompanies(null)">
-                                    <i class="fas fa-question-circle me-1"></i>
-                                    Sin Definir Todas
-                                </button>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <button class="btn btn-warning w-100" onclick="showBulkActionModal()">
                                     <i class="fas fa-edit me-1"></i>
                                     Acción Personalizada
@@ -107,7 +101,6 @@
                                     <option value="">Todos</option>
                                     <option value="true">Activo (True)</option>
                                     <option value="false">Inactivo (False)</option>
-                                    <option value="null">Sin definir (Null)</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -128,7 +121,7 @@
 
                 <!-- Estadísticas -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
                                 <h5 class="card-title">Total</h5>
@@ -136,7 +129,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-success text-white">
                             <div class="card-body">
                                 <h5 class="card-title">Activas</h5>
@@ -144,19 +137,11 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-warning text-white">
                             <div class="card-body">
                                 <h5 class="card-title">Inactivas</h5>
                                 <h3 id="inactiveCount">0</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-secondary text-white">
-                            <div class="card-body">
-                                <h5 class="card-title">Sin definir</h5>
-                                <h3 id="nullCount">0</h3>
                             </div>
                         </div>
                     </div>
@@ -227,7 +212,6 @@
                         <select class="form-select" id="bulkActionSelect">
                             <option value="true">Activar todas las compañías</option>
                             <option value="false">Desactivar todas las compañías</option>
-                            <option value="null">Marcar como "Sin definir" todas las compañías</option>
                         </select>
                     </div>
                     <div class="alert alert-warning">
@@ -306,9 +290,6 @@
                             <button class="btn btn-outline-danger" onclick="toggleStatus(${company.company_id}, false)" title="Desactivar">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button class="btn btn-outline-secondary" onclick="toggleStatus(${company.company_id}, null)" title="Sin definir">
-                                <i class="fas fa-question"></i>
-                            </button>
                         </div>
                     </td>
                 `;
@@ -320,12 +301,10 @@
             const total = filteredData.length;
             const active = filteredData.filter(c => c.company_bigquery_status === true).length;
             const inactive = filteredData.filter(c => c.company_bigquery_status === false).length;
-            const nullStatus = filteredData.filter(c => c.company_bigquery_status === null).length;
 
             document.getElementById('totalCount').textContent = total;
             document.getElementById('activeCount').textContent = active;
             document.getElementById('inactiveCount').textContent = inactive;
-            document.getElementById('nullCount').textContent = nullStatus;
         }
 
         function updateProjectFilter() {
@@ -353,8 +332,7 @@
                 
                 const matchesStatus = !statusFilter || 
                     (statusFilter === 'true' && company.company_bigquery_status === true) ||
-                    (statusFilter === 'false' && company.company_bigquery_status === false) ||
-                    (statusFilter === 'null' && company.company_bigquery_status === null);
+                    (statusFilter === 'false' && company.company_bigquery_status === false);
                 
                 const matchesProject = !projectFilter || company.company_project_id === projectFilter;
 
@@ -461,7 +439,7 @@
 
         // Funciones para acciones masivas
         function updateAllCompanies(newStatus) {
-            const statusText = newStatus === true ? 'activar' : newStatus === false ? 'desactivar' : 'marcar como sin definir';
+            const statusText = newStatus === true ? 'activar' : 'desactivar';
             
             document.getElementById('confirmMessage').innerHTML = `
                 ¿Estás seguro de que quieres <strong>${statusText}</strong> <strong>TODAS</strong> las compañías?<br><br>
@@ -509,7 +487,7 @@
 
         function executeBulkAction() {
             const selectedAction = document.getElementById('bulkActionSelect').value;
-            const newStatus = selectedAction === 'null' ? null : selectedAction === 'true';
+            const newStatus = selectedAction === 'true';
             
             bootstrap.Modal.getInstance(document.getElementById('bulkActionModal')).hide();
             updateAllCompanies(newStatus);

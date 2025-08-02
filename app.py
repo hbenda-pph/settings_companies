@@ -112,7 +112,8 @@ def update_all_companies_status(new_status):
     try:
         query_job = client.query(query, job_config=job_config)
         query_job.result()
-        return True, f"Status actualizado exitosamente para todas las compañías a: {new_status}"
+        status_text = "TRUE" if new_status else "FALSE"
+        return True, f"Status actualizado exitosamente para todas las compañías a: {status_text}"
     except Exception as e:
         return False, f"Error al actualizar: {str(e)}"
 
