@@ -106,6 +106,7 @@ def update_all_companies_status(new_status):
     query = f"""
         UPDATE `{PROJECT_ID}.{DATASET_NAME}.{TABLE_NAME}`
         SET company_bigquery_status = {status_value}
+        WHERE 1=1
     """
     
     print(f"📝 Query de actualización masiva: {query}")
