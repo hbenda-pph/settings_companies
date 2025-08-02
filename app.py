@@ -68,53 +68,55 @@ def get_companies():
 
 def update_company_status(company_id, new_status):
     """Actualiza el status de una compañía"""
+    print(f"🔄 Actualizando compañía {company_id} a status: {new_status}")
+    
     client = get_bigquery_client()
     if not client:
         return False, "Error al conectar con BigQuery"
     
+    # Usar query directa sin parámetros para evitar problemas
+    status_value = "TRUE" if new_status else "FALSE"
     query = f"""
         UPDATE `{PROJECT_ID}.{DATASET_NAME}.{TABLE_NAME}`
-        SET company_bigquery_status = @new_status
-        WHERE company_id = @company_id
+        SET company_bigquery_status = {status_value}
+        WHERE company_id = {company_id}
     """
     
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("new_status", "BOOLEAN", new_status),
-            bigquery.ScalarQueryParameter("company_id", "INTEGER", company_id),
-        ]
-    )
+    print(f"📝 Query de actualización: {query}")
     
     try:
-        query_job = client.query(query, job_config=job_config)
-        query_job.result()
-        return True, "Status actualizado exitosamente"
+        query_job = client.query(query)
+        result = query_job.result()
+        print(f"✅ Actualización completada. Filas afectadas: {result.num_dml_affected_rows}")
+        return True, f"Status actualizado exitosamente a {status_value}"
     except Exception as e:
+        print(f"❌ Error en actualización: {e}")
         return False, f"Error al actualizar: {str(e)}"
 
 def update_all_companies_status(new_status):
     """Actualiza el status de todas las compañías"""
+    print(f"🔄 Actualizando TODAS las compañías a status: {new_status}")
+    
     client = get_bigquery_client()
     if not client:
         return False, "Error al conectar con BigQuery"
     
+    # Usar query directa sin parámetros para evitar problemas
+    status_value = "TRUE" if new_status else "FALSE"
     query = f"""
         UPDATE `{PROJECT_ID}.{DATASET_NAME}.{TABLE_NAME}`
-        SET company_bigquery_status = @new_status
+        SET company_bigquery_status = {status_value}
     """
     
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("new_status", "BOOLEAN", new_status),
-        ]
-    )
+    print(f"📝 Query de actualización masiva: {query}")
     
     try:
-        query_job = client.query(query, job_config=job_config)
-        query_job.result()
-        status_text = "TRUE" if new_status else "FALSE"
-        return True, f"Status actualizado exitosamente para todas las compañías a: {status_text}"
+        query_job = client.query(query)
+        result = query_job.result()
+        print(f"✅ Actualización masiva completada. Filas afectadas: {result.num_dml_affected_rows}")
+        return True, f"Status actualizado exitosamente para todas las compañías a: {status_value}"
     except Exception as e:
+        print(f"❌ Error en actualización masiva: {e}")
         return False, f"Error al actualizar: {str(e)}"
 
 @app.route('/')
@@ -140,12 +142,16 @@ def api_update_status():
     company_id = data.get('company_id')
     new_status = data.get('status')
     
+    print(f"🔍 API update_status - Data recibida: {data}")
+    print(f"🔍 API update_status - company_id: {company_id} (tipo: {type(company_id)})")
+    print(f"🔍 API update_status - new_status: {new_status} (tipo: {type(new_status)})")
+    
     if company_id is None or new_status is None:
         return jsonify({'success': False, 'message': 'Datos incompletos'}), 400
     
     # Validar que new_status sea un boolean
     if not isinstance(new_status, bool):
-        return jsonify({'success': False, 'message': 'Status debe ser true o false'}), 400
+        return jsonify({'success': False, 'message': f'Status debe ser true o false, recibido: {new_status} (tipo: {type(new_status)})'}), 400
     
     success, message = update_company_status(company_id, new_status)
     return jsonify({'success': success, 'message': message})
